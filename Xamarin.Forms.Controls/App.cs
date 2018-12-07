@@ -106,7 +106,10 @@ namespace Xamarin.Forms.Controls
 
 		public Page CreateDefaultMainPage()
 		{
-			var layout = new StackLayout { BackgroundColor = Color.Red };
+			Device.SetFlags(new[] { "Shell_Experimental", "Visual_Experimental" });
+			return new VisualGallery();
+
+			/*var layout = new StackLayout { BackgroundColor = Color.Red };
 			layout.Children.Add(new Label { Text = "This is master Page" });
 			var master = new ContentPage { Title = "Master", Content = layout, BackgroundColor = Color.SkyBlue, Icon ="menuIcon" };
 			master.On<iOS>().SetUseSafeArea(true);
@@ -121,7 +124,7 @@ namespace Xamarin.Forms.Controls
 			mdp.SetAutomationPropertiesHelpText("Main page help text");
 			mdp.Master.Icon.SetAutomationPropertiesHelpText("This as MDP icon");
 			mdp.Master.Icon.SetAutomationPropertiesName("MDPICON");
-			return mdp;
+			return mdp;*/
 
 			//Device.SetFlags(new[] { "Shell_Experimental" });
             //return new XamStore.StoreShell();

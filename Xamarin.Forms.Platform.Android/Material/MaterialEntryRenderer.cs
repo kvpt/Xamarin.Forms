@@ -90,11 +90,16 @@ namespace Xamarin.Forms.Platform.Android.Material
 			_tracker?.UpdateLayout();
 		}
 
+		protected override void OnLayout(bool changed, int left, int top, int right, int bottom)
+		{
+			base.OnLayout(changed, left, top, right, bottom);
+		}
 
 		SizeRequest IVisualElementRenderer.GetDesiredSize(int widthConstraint, int heightConstraint)
 		{
-			AView view = this;
-			view.Measure(widthConstraint, heightConstraint);
+			AView view = _textInputEditText;
+			this.Measure(widthConstraint, heightConstraint);
+			_textInputEditText.Measure(widthConstraint, heightConstraint);
 			return new SizeRequest(new Size(MeasuredWidth, MeasuredHeight), MinimumSize());
 		}
 
@@ -162,6 +167,8 @@ namespace Xamarin.Forms.Platform.Android.Material
 			if (oldElement == null)
 			{
 				_textInputEditText = new MaterialFormsEditText(Context);
+				_textInputEditText.LayoutParameters = new LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
+
 				AddView(_textInputEditText);
 
 				_textInputEditText.FocusChange += _textInputEditText_FocusChange;

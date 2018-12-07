@@ -21,6 +21,144 @@ using Xamarin.Forms;
 [assembly: ExportRenderer(typeof(Xamarin.Forms.Entry), typeof(Xamarin.Forms.Platform.iOS.Material.MaterialEntryRenderer), new[] { typeof(VisualRendererMarker.Material) })]
 namespace Xamarin.Forms.Platform.iOS.Material
 {
+
+	public class FormsMTextField : MTextField
+	{
+		//NSLayoutConstraint heightConstraint;
+		public FormsMTextField()
+		{
+			//this.LayoutMargins = new UIEdgeInsets(30, 30, 30, 30);
+			//this.TranslatesAutoresizingMaskIntoConstraints = false;
+			//this.TranslatesAutoresizingMaskIntoConstraints = false;
+
+			//heightConstraint = NSLayoutConstraint.Create(this, NSLayoutAttribute.Height, NSLayoutRelation.Equal, 1, 200);
+
+			//this.AddConstraint(NSLayoutConstraint.Create(this, NSLayoutAttribute.Width, NSLayoutRelation.Equal, 1, 375));
+			//this.AddConstraint(heightConstraint);
+			//heightConstraint.Priority = (float)UILayoutPriority.Required;
+
+			this.BackgroundColor = Color.Pink.ToUIColor();
+
+		}
+		public override UIEdgeInsets TextInsets
+		{
+			get
+			{
+				//return new UIEdgeInsets(00, 00, 10, 300);
+				var result = base.TextInsets;
+				//return new UIEdgeInsets(62, 0, 0, result.Right);
+
+				return result;
+			}
+		}
+
+		public override CGSize IntrinsicContentSize
+		{
+			get
+			{
+				var thing = base.IntrinsicContentSize;
+				return new CGSize(375, 200);
+
+			}
+		}
+
+
+		public override void InvalidateIntrinsicContentSize()
+		{
+			base.InvalidateIntrinsicContentSize();
+		}
+
+		public override CGSize SizeThatFits(CGSize size)
+		{
+			return new CGSize(375, 200);
+		}
+
+		public override void LayoutSubviews()
+		{
+			base.LayoutSubviews();
+		}
+
+
+		public override CGRect Frame
+		{
+			get => base.Frame;
+			set
+			{
+				value = new CGRect(0, 0, 375, 200);
+				base.Frame = value;
+			}
+
+		}
+
+		public override CGRect Bounds
+		{
+			get => base.Bounds;
+			set
+			{
+				value = new CGRect(0, 0, 375, 200);
+				base.Frame = value;
+			}
+		}
+
+		public override CGRect TextRect(CGRect forBounds)
+		{
+			var result = base.TextRect(this.Frame);
+
+			return result;
+		}
+
+
+
+		public override CGRect EditingRect(CGRect forBounds)
+		{
+			return base.EditingRect(this.Frame);
+		}
+
+		public override CGRect PlaceholderRect(CGRect forBounds)
+		{
+			return base.PlaceholderRect(this.Frame);
+		}
+
+		public override CGRect BorderRect(CGRect forBounds)
+		{
+			return base.BorderRect(Frame);
+		}
+
+		/*public override void DrawPlaceholder(CGRect rect)
+		{
+			base.DrawPlaceholder(rect);
+
+			foreach (var view in Subviews)
+			{
+				if(view is UILabel label && label.Text == "Location")
+				{
+					var constraints = view.Constraints;
+
+				}
+			}
+		}
+		*/
+		/*public override CGRect EditingRect(CGRect forBounds)
+		{
+			var bounds = base.EditingRect(forBounds);
+			var result = new CGRect(bounds.X + 30, bounds.Y, bounds.Width, bounds.Height);
+			return result;
+		}
+
+		public override CGRect PlaceholderRect(CGRect forBounds)
+		{
+			var bounds = base.PlaceholderRect(forBounds);
+			var result = new CGRect(bounds.X + 30, bounds.Y, bounds.Width, bounds.Height);
+			return result;
+		}
+		public override CGRect TextRect(CGRect forBounds)
+		{
+			var bounds = base.TextRect(forBounds);
+			var result = new CGRect(bounds.X + 30, bounds.Y, bounds.Width, bounds.Height);
+			return result;
+		}*/
+	}
+
 	public class MaterialEntryRenderer : ViewRenderer<Entry, MTextField>
 	{
 		UIColor _defaultTextColor;
@@ -43,23 +181,39 @@ namespace Xamarin.Forms.Platform.iOS.Material
 
 		public MaterialEntryRenderer()
 		{
+			Frame = new RectangleF(0, 20, 320, 400);
+			Bounds = new RectangleF(0, 20, 320, 400);
 			VisualElement.VerifyVisualFlagEnabled();
 		}
 
-		//public override SizeRequest GetDesiredSize(double widthConstraint, double heightConstraint)
-		//{
-		//	var baseResult = base.GetDesiredSize(widthConstraint, heightConstraint);
+		/*public override SizeRequest GetDesiredSize(double widthConstraint, double heightConstraint)
+		{
+			var size =  base.GetDesiredSize(widthConstraint, heightConstraint);
 
-		//	if (Forms.IsiOS11OrNewer)
-		//		return baseResult;
+			return size;
+		}*/
 
-		//	NSString testString = new NSString("Tj");
-		//	var testSize = testString.GetSizeUsingAttributes(new UIStringAttributes { Font = Control.Font });
-		//	double height = baseHeight + testSize.Height - initialSize.Height;
-		//	height = Math.Round(height);
 
-		//	return new SizeRequest(new Size(baseResult.Request.Width, height));
-		//}
+		public override void LayoutSubviews()
+		{
+			base.LayoutSubviews();
+		}
+
+
+		public override SizeRequest GetDesiredSize(double widthConstraint, double heightConstraint)
+		{
+			var baseResult = base.GetDesiredSize(widthConstraint, heightConstraint);
+
+			if (Forms.IsiOS11OrNewer)
+				return baseResult;
+
+			NSString testString = new NSString("Tj");
+			var testSize = testString.GetSizeUsingAttributes(new UIStringAttributes { Font = Control.Font });
+			double height = 30 + testSize.Height - initialSize.Height;
+			height = Math.Round(height);
+
+			return new SizeRequest(new Size(baseResult.Request.Width, height));
+		}
 
 		IElementController ElementController => Element as IElementController;
 
@@ -88,14 +242,17 @@ namespace Xamarin.Forms.Platform.iOS.Material
 			base.Dispose(disposing);
 		}
 
+
 		MTextInputControllerBase _activeTextinputController;
 
 		protected override MTextField CreateNativeControl()
 		{
-			var field = new MTextField();
+			var field = new FormsMTextField();
 			field.BorderStyle = UITextBorderStyle.None;
-			field.ClearButtonMode = UITextFieldViewMode.UnlessEditing;
+			field.ClearButtonMode = UITextFieldViewMode.Never;
 			_activeTextinputController = new MTextInputControllerFilled(field);
+			//_activeTextinputController.TextInsets(new UIEdgeInsets(10, 70, 0, 0));
+
 			return field;
 		}
 
@@ -116,7 +273,7 @@ namespace Xamarin.Forms.Platform.iOS.Material
 
 				_useLegacyColorManagement = e.NewElement.UseLegacyColorManagement();
 
-			//textField.BorderStyle = UITextBorderStyle.RoundedRect;
+				//textField.BorderStyle = UITextBorderStyle.RoundedRect;
 				//textField.ClipsToBounds = true;
 
 				textField.EditingChanged += OnEditingChanged;
@@ -157,6 +314,8 @@ namespace Xamarin.Forms.Platform.iOS.Material
 			{
 				_activeTextinputController.BorderFillColor = color.ToUIColor();
 			}
+
+			//this.BackgroundColor = Color.Red.ToUIColor();
 		}
 
 		protected override void OnElementPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -342,6 +501,7 @@ namespace Xamarin.Forms.Platform.iOS.Material
 			_activeTextinputController.FloatingPlaceholderActiveColor = iosColor;
 			_activeTextinputController.FloatingPlaceholderNormalColor = iosColor;
 			_activeTextinputController.PlaceholderText = placeholderText;
+			Control.Placeholder = placeholderText;
 			_activeTextinputController.UnderlineViewMode = UITextFieldViewMode.Always;
 
 		}

@@ -34,7 +34,6 @@ using Android.Util;
 using Android.Views;
 using Xamarin.Forms.Internals;
 using AView = Android.Views.View;
-
 using Object = Java.Lang.Object;
 using static Xamarin.Forms.PlatformConfiguration.AndroidSpecific.AppCompat.NavigationPage;
 using static Android.Views.View;

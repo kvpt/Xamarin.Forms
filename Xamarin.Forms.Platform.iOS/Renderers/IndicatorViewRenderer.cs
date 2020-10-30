@@ -37,6 +37,12 @@ namespace Xamarin.Forms.Platform.iOS
 
 			if (UIPager != null)
 			{
+				if (Forms.IsiOS14OrNewer)
+				{
+					UIPager.AllowsContinuousInteraction = false;
+					UIPager.BackgroundStyle = UIPageControlBackgroundStyle.Minimal;
+				}
+
 				UpdatePagesIndicatorTintColor();
 				UpdateCurrentPagesIndicatorTintColor();
 				UpdatePages();
@@ -187,6 +193,8 @@ namespace Xamarin.Forms.Platform.iOS
 				return;
 
 			UIPager.Pages = GetMaximumVisible();
+
+			UpdateCurrentPage();
 		}
 
 		void UpdateHidesForSinglePage()

@@ -3,15 +3,11 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using Android.Content;
 using Android.Graphics;
+using Android.Views;
+using AndroidX.Core.View;
+using Xamarin.Forms.Internals;
 using AImageView = Android.Widget.ImageView;
 using AView = Android.Views.View;
-using Android.Views;
-using Xamarin.Forms.Internals;
-#if __ANDROID_29__
-using AndroidX.Core.View;
-#else
-using Android.Support.V4.View;
-#endif
 
 namespace Xamarin.Forms.Platform.Android.FastRenderers
 {
@@ -83,6 +79,13 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 			}
 
 			base.Invalidate();
+		}
+
+		public override void Draw(Canvas canvas)
+		{
+			canvas.ClipShape(Context, Element);
+
+			base.Draw(canvas);
 		}
 
 		protected virtual void OnElementChanged(ElementChangedEventArgs<Image> e)
@@ -183,7 +186,7 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 		void IImageRendererController.SkipInvalidate() => _skipInvalidate = true;
 		void IImageRendererController.SetFormsAnimationDrawable(IFormsAnimationDrawable value)
 		{
-			if(_formsAnimationDrawable != null)
+			if (_formsAnimationDrawable != null)
 				_formsAnimationDrawable.AnimationStopped -= OnAnimationStopped;
 
 			_formsAnimationDrawable = value;

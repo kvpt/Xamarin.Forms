@@ -11,18 +11,14 @@ using Android.Content.PM;
 using Android.Gms.Maps;
 using Android.Gms.Maps.Model;
 using Android.OS;
-#if __ANDROID_29__
 using AndroidX.Core.Content;
-#else
-using Android.Support.V4.Content;
-#endif
 using Java.Lang;
 using Xamarin.Forms.Internals;
 using Xamarin.Forms.Platform.Android;
-using Math = System.Math;
-using APolyline = Android.Gms.Maps.Model.Polyline;
-using APolygon = Android.Gms.Maps.Model.Polygon;
 using ACircle = Android.Gms.Maps.Model.Circle;
+using APolygon = Android.Gms.Maps.Model.Polygon;
+using APolyline = Android.Gms.Maps.Model.Polyline;
+using Math = System.Math;
 
 namespace Xamarin.Forms.Maps.Android
 {
@@ -422,19 +418,31 @@ namespace Xamarin.Forms.Maps.Android
 			}
 		}
 
-		void OnPinCollectionChanged(object sender, NotifyCollectionChangedEventArgs notifyCollectionChangedEventArgs)
+		void OnPinCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
-			switch (notifyCollectionChangedEventArgs.Action)
+			if (Device.IsInvokeRequired)
+			{
+				Device.BeginInvokeOnMainThread(() => PinCollectionChanged(e));
+			}
+			else
+			{
+				PinCollectionChanged(e);
+			}
+		}
+
+		void PinCollectionChanged(NotifyCollectionChangedEventArgs e)
+		{
+			switch (e.Action)
 			{
 				case NotifyCollectionChangedAction.Add:
-					AddPins(notifyCollectionChangedEventArgs.NewItems);
+					AddPins(e.NewItems);
 					break;
 				case NotifyCollectionChangedAction.Remove:
-					RemovePins(notifyCollectionChangedEventArgs.OldItems);
+					RemovePins(e.OldItems);
 					break;
 				case NotifyCollectionChangedAction.Replace:
-					RemovePins(notifyCollectionChangedEventArgs.OldItems);
-					AddPins(notifyCollectionChangedEventArgs.NewItems);
+					RemovePins(e.OldItems);
+					AddPins(e.NewItems);
 					break;
 				case NotifyCollectionChangedAction.Reset:
 					if (_markers != null)
@@ -532,24 +540,36 @@ namespace Xamarin.Forms.Maps.Android
 			switch (sender)
 			{
 				case Polyline polyline:
-				{
-					PolylineOnPropertyChanged(polyline, e);
-					break;
-				}
+					{
+						PolylineOnPropertyChanged(polyline, e);
+						break;
+					}
 				case Polygon polygon:
-				{
-					PolygonOnPropertyChanged(polygon, e);
-					break;
-				}
+					{
+						PolygonOnPropertyChanged(polygon, e);
+						break;
+					}
 				case Circle circle:
-				{
-					CircleOnPropertyChanged(circle, e);
-					break;
-				}
+					{
+						CircleOnPropertyChanged(circle, e);
+						break;
+					}
 			}
 		}
 
 		void OnMapElementCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			if (Device.IsInvokeRequired)
+			{
+				Device.BeginInvokeOnMainThread(() => MapElementCollectionChanged(e));
+			}
+			else
+			{
+				MapElementCollectionChanged(e);
+			}
+		}
+
+		void MapElementCollectionChanged(NotifyCollectionChangedEventArgs e)
 		{
 			switch (e.Action)
 			{
@@ -566,7 +586,7 @@ namespace Xamarin.Forms.Maps.Android
 				case NotifyCollectionChangedAction.Reset:
 					if (_polylines != null)
 					{
-						for(int i = 0; i < _polylines.Count; i++)
+						for (int i = 0; i < _polylines.Count; i++)
 							_polylines[i].Remove();
 
 						_polylines = null;
@@ -950,7 +970,7 @@ namespace Xamarin.Forms.Maps.Android
 			{
 				nativeCircle.StrokeColor = formsCircle.StrokeColor.ToAndroid();
 			}
-			else if(e.PropertyName == MapElement.StrokeWidthProperty.PropertyName)
+			else if (e.PropertyName == MapElement.StrokeWidthProperty.PropertyName)
 			{
 				nativeCircle.StrokeWidth = formsCircle.StrokeWidth;
 			}

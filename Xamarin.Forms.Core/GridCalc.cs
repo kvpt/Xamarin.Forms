@@ -196,90 +196,228 @@ namespace Xamarin.Forms
 			}
 		}
 
-		void ContractColumnsIfNeeded(double width, Func<ColumnDefinition, bool> predicate)
+		double ComputeColumnWidthSum()
 		{
-			double columnWidthSum = 0;
+			double columnwWidthSum = 0;
 			for (var index = 0; index < _columns.Count; index++)
 			{
 				ColumnDefinition c = _columns[index];
-				columnWidthSum += c.ActualWidth;
+				columnwWidthSum += Math.Max(0, c.ActualWidth);
 			}
 
+			return columnwWidthSum;
+		}
+
+		double ComputeRowHeightSum()
+		{
 			double rowHeightSum = 0;
 			for (var index = 0; index < _rows.Count; index++)
 			{
 				RowDefinition r = _rows[index];
-				rowHeightSum += r.ActualHeight;
+				rowHeightSum += Math.Max(0, r.ActualHeight);
 			}
 
-			var request = new Size(columnWidthSum + (_columns.Count - 1) * ColumnSpacing, rowHeightSum + (_rows.Count - 1) * RowSpacing);
-			if (request.Width > width)
+			return rowHeightSum;
+		}
+
+		Size ComputeCurrentSize()
+		{
+			var columnWidthSum = ComputeColumnWidthSum();
+			var rowHeightSum = ComputeRowHeightSum();
+
+			return new Size(columnWidthSum + (_columns.Count - 1) * ColumnSpacing, rowHeightSum + (_rows.Count - 1) * RowSpacing);
+		}
+
+		void ContractAutoColumnsIfNeeded(double targetWidth)
+		{
+			var currentSize = ComputeCurrentSize();
+
+			if (currentSize.Width <= targetWidth)
 			{
-				double contractionSpace = 0;
+				return;
+			}
+
+			double contractionSpace = 0;
+			for (var index = 0; index < _columns.Count; index++)
+			{
+				ColumnDefinition c = _columns[index];
+				if (c.Width.IsAuto)
+					contractionSpace += c.ActualWidth - c.MinimumWidth;
+			}
+			if (contractionSpace > 0)
+			{
+				// contract as much as we can but no more
+				double contractionNeeded = Math.Min(contractionSpace, Math.Max(currentSize.Width - targetWidth, 0));
+				double contractFactor = contractionNeeded / contractionSpace;
+
 				for (var index = 0; index < _columns.Count; index++)
 				{
-					ColumnDefinition c = _columns[index];
-					if (predicate(c))
-						contractionSpace += c.ActualWidth - c.MinimumWidth;
-				}
-				if (contractionSpace > 0)
-				{
-					// contract as much as we can but no more
-					double contractionNeeded = Math.Min(contractionSpace, Math.Max(request.Width - width, 0));
-					double contractFactor = contractionNeeded / contractionSpace;
-					for (var index = 0; index < _columns.Count; index++)
-					{
-						ColumnDefinition col = _columns[index];
-						if (!predicate(col))
-							continue;
-						double availableSpace = col.ActualWidth - col.MinimumWidth;
-						double contraction = availableSpace * contractFactor;
-						col.ActualWidth -= contraction;
-						contractionNeeded -= contraction;
-					}
+					ColumnDefinition col = _columns[index];
+					if (!col.Width.IsAuto)
+						continue;
+					double availableSpace = col.ActualWidth - Math.Max(col.MinimumWidth, 0);
+					double contraction = availableSpace * contractFactor;
+					col.ActualWidth -= contraction;
+					contractionNeeded -= contraction;
 				}
 			}
 		}
 
-		void ContractRowsIfNeeded(double height, Func<RowDefinition, bool> predicate)
+		void ContractAutoRowsIfNeeded(double targetHeight)
 		{
-			double columnSum = 0;
-			for (var index = 0; index < _columns.Count; index++)
+			var currentSize = ComputeCurrentSize();
+
+			if (currentSize.Height <= targetHeight)
 			{
-				ColumnDefinition c = _columns[index];
-				columnSum += Math.Max(0, c.ActualWidth);
-			}
-			double rowSum = 0;
-			for (var index = 0; index < _rows.Count; index++)
-			{
-				RowDefinition r = _rows[index];
-				rowSum += Math.Max(0, r.ActualHeight);
+				return;
 			}
 
-			var request = new Size(columnSum + (_columns.Count - 1) * ColumnSpacing, rowSum + (_rows.Count - 1) * RowSpacing);
-			if (request.Height <= height)
-				return;
 			double contractionSpace = 0;
 			for (var index = 0; index < _rows.Count; index++)
 			{
 				RowDefinition r = _rows[index];
-				if (predicate(r))
+				if (r.Height.IsAuto)
 					contractionSpace += r.ActualHeight - r.MinimumHeight;
 			}
 			if (!(contractionSpace > 0))
 				return;
 			// contract as much as we can but no more
-			double contractionNeeded = Math.Min(contractionSpace, Math.Max(request.Height - height, 0));
+			double contractionNeeded = Math.Min(contractionSpace, Math.Max(currentSize.Height - targetHeight, 0));
 			double contractFactor = contractionNeeded / contractionSpace;
 			for (var index = 0; index < _rows.Count; index++)
 			{
 				RowDefinition row = _rows[index];
-				if (!predicate(row))
+				if (!row.Height.IsAuto)
 					continue;
 				double availableSpace = row.ActualHeight - row.MinimumHeight;
 				double contraction = availableSpace * contractFactor;
 				row.ActualHeight -= contraction;
 				contractionNeeded -= contraction;
+			}
+		}
+
+		void ContractStarColumnsIfNeeded(double targetWidth)
+		{
+			var request = ComputeCurrentSize();
+
+			if (request.Width <= targetWidth)
+			{
+				return;
+			}
+
+			double starColumnWidth = 0;
+			double starColumnMinWidth = 0;
+			double contractionSpace = 0;
+
+			for (int n = 0; n < _columns.Count; n++)
+			{
+				var column = _columns[n];
+
+				if (!column.Width.IsStar)
+				{
+					continue;
+				}
+
+				if (starColumnWidth == 0)
+				{
+					starColumnWidth = column.ActualWidth;
+				}
+				else
+				{
+					starColumnWidth = Math.Min(column.ActualWidth, starColumnWidth);
+				}
+
+				if (column.MinimumWidth > starColumnMinWidth)
+				{
+					starColumnMinWidth = column.MinimumWidth;
+				}
+
+				contractionSpace += column.ActualWidth - column.MinimumWidth;
+			}
+
+			if (contractionSpace <= 0)
+			{
+				return;
+			}
+
+			// contract as much as we can but no more
+			double contractionNeeded = Math.Min(contractionSpace, Math.Max(request.Width - targetWidth, 0));
+			double contractionFactor = contractionNeeded / contractionSpace;
+			var delta = contractionFactor >= 1
+				? starColumnWidth - starColumnMinWidth
+				: contractionFactor * (starColumnWidth - starColumnMinWidth);
+
+			for (var index = 0; index < _columns.Count; index++)
+			{
+				ColumnDefinition column = _columns[index];
+				if (!column.Width.IsStar)
+				{
+					continue;
+				}
+
+				column.ActualWidth -= delta * column.Width.Value;
+			}
+		}
+
+		void ContractStarRowsIfNeeded(double targetHeight)
+		{
+			var request = ComputeCurrentSize();
+
+			if (request.Height <= targetHeight)
+			{
+				return;
+			}
+
+			double starRowHeight = 0;
+			double starRowMinHeight = 0;
+			double contractionSpace = 0;
+
+			for (int n = 0; n < _rows.Count; n++)
+			{
+				var row = _rows[n];
+
+				if (!row.Height.IsStar)
+				{
+					continue;
+				}
+
+				if (starRowHeight == 0)
+				{
+					starRowHeight = row.ActualHeight;
+				}
+				else
+				{
+					starRowHeight = Math.Min(row.ActualHeight, starRowHeight);
+				}
+
+				if (row.MinimumHeight > starRowMinHeight)
+				{
+					starRowMinHeight = row.MinimumHeight;
+				}
+
+				contractionSpace += row.ActualHeight - row.MinimumHeight;
+			}
+
+			if (contractionSpace <= 0)
+			{
+				return;
+			}
+
+			double contractionNeeded = Math.Min(contractionSpace, Math.Max(request.Height - targetHeight, 0));
+			double contractionFactor = contractionNeeded / contractionSpace;
+			var delta = contractionFactor >= 1
+				? starRowHeight - starRowMinHeight
+				: contractionFactor * (starRowHeight - starRowMinHeight);
+
+			for (var index = 0; index < _rows.Count; index++)
+			{
+				RowDefinition row = _rows[index];
+				if (!row.Height.IsStar)
+				{
+					continue;
+				}
+
+				row.ActualHeight -= delta * row.Height.Value;
 			}
 		}
 
@@ -360,9 +498,17 @@ namespace Xamarin.Forms
 					continue;
 
 				double assignedHeight = GetAssignedRowHeight(child);
-				double h = double.IsPositiveInfinity(height) ? double.PositiveInfinity : assignedHeight + GetUnassignedHeight(height);
-				SizeRequest sizeRequest = child.Measure(GetAssignedColumnWidth(child), h, MeasureFlags.IncludeMargins);
-				double requiredHeight = expandToRequest ? sizeRequest.Request.Height : sizeRequest.Minimum.Height;
+				var unassignedHeight = GetUnassignedHeight(height);
+				double h = double.IsPositiveInfinity(height) ? double.PositiveInfinity : assignedHeight + unassignedHeight;
+
+				var acw = GetAssignedColumnWidth(child);
+
+				SizeRequest sizeRequest = child.Measure(acw, h, MeasureFlags.IncludeMargins);
+
+				double requiredHeight = expandToRequest
+					? sizeRequest.Request.Height
+					: sizeRequest.Request.Height <= h ? sizeRequest.Request.Height : sizeRequest.Minimum.Height;
+
 				double deltaHeight = requiredHeight - assignedHeight - (GetRowSpan(child) - 1) * RowSpacing;
 				if (deltaHeight > 0)
 				{
@@ -374,7 +520,7 @@ namespace Xamarin.Forms
 		void MeasureAndContractStarredColumns(double width, double height, double totalStarsWidth)
 		{
 			double starColWidth;
-			starColWidth = MeasuredStarredColumns(width, height);
+			starColWidth = MeasuredStarredColumns(GetUnassignedWidth(width), height, totalStarsWidth);
 
 			if (!double.IsPositiveInfinity(width) && double.IsPositiveInfinity(height))
 			{
@@ -396,13 +542,13 @@ namespace Xamarin.Forms
 					col.ActualWidth = col.Width.Value * starColWidth;
 			}
 
-			ContractColumnsIfNeeded(width, c => c.Width.IsStar);
+			ContractStarColumnsIfNeeded(width);
 		}
 
 		void MeasureAndContractStarredRows(double width, double height, double totalStarsHeight)
 		{
 			double starRowHeight;
-			starRowHeight = MeasureStarredRows();
+			starRowHeight = MeasureStarredRows(width, GetUnassignedHeight(height), totalStarsHeight);
 
 			if (!double.IsPositiveInfinity(height) && double.IsPositiveInfinity(width))
 			{
@@ -423,57 +569,7 @@ namespace Xamarin.Forms
 					row.ActualHeight = row.Height.Value * starRowHeight;
 			}
 
-			ContractRowsIfNeeded(height, r => r.Height.IsStar);
-		}
-
-		double MeasuredStarredColumns(double widthConstraint, double heightConstraint)
-		{
-			double starColWidth;
-			for (var iteration = 0; iteration < 2; iteration++)
-			{
-				for (var colspan = 1; colspan <= _columns.Count; colspan++)
-				{
-					for (var i = 0; i < _columns.Count; i++)
-					{
-						ColumnDefinition col = _columns[i];
-						if (!col.Width.IsStar)
-							continue;
-						if (col.ActualWidth >= 0) // if Actual is already set (by a smaller span), skip
-							continue;
-
-						double actualWidth = col.ActualWidth;
-						double minimumWidth = col.MinimumWidth;
-						for (var index = 0; index < InternalChildren.Count; index++)
-						{
-							var child = (View)InternalChildren[index];
-							if (!child.IsVisible || GetColumnSpan(child) != colspan || !IsInColumn(child, i) || NumberOfUnsetColumnWidth(child) > 1)
-								continue;
-							double assignedWidth = GetAssignedColumnWidth(child);
-
-							SizeRequest sizeRequest = child.Measure(widthConstraint, heightConstraint, MeasureFlags.IncludeMargins);
-							actualWidth = Math.Max(actualWidth, sizeRequest.Request.Width - assignedWidth - (GetColumnSpan(child) - 1) * ColumnSpacing);
-							minimumWidth = Math.Max(minimumWidth, sizeRequest.Minimum.Width - assignedWidth - (GetColumnSpan(child) - 1) * ColumnSpacing);
-						}
-						if (actualWidth >= 0)
-							col.ActualWidth = actualWidth;
-
-						if (minimumWidth >= 0)
-							col.MinimumWidth = minimumWidth;
-					}
-				}
-			}
-
-			//Measure the stars
-			starColWidth = 1;
-			for (var index = 0; index < _columns.Count; index++)
-			{
-				ColumnDefinition col = _columns[index];
-				if (!col.Width.IsStar)
-					continue;
-				starColWidth = col.Width.Value != 0 ? Math.Max(starColWidth, col.ActualWidth / col.Width.Value) : 0;
-			}
-
-			return starColWidth;
+			ContractStarRowsIfNeeded(height);
 		}
 
 		void MeasureGrid(double width, double height, bool requestSize = false)
@@ -486,8 +582,8 @@ namespace Xamarin.Forms
 
 			if (!requestSize)
 			{
-				ContractColumnsIfNeeded(width, c => c.Width.IsAuto);
-				ContractRowsIfNeeded(height, r => r.Height.IsAuto);
+				ContractAutoColumnsIfNeeded(width);
+				ContractAutoRowsIfNeeded(height);
 			}
 
 			double totalStarsHeight = 0;
@@ -522,7 +618,62 @@ namespace Xamarin.Forms
 			ExpandLastAutoColumnIfNeeded(width, requestSize);
 		}
 
-		double MeasureStarredRows()
+		double MeasuredStarredColumns(double widthConstraint, double heightConstraint, double totalStarsWidth)
+		{
+			double starColWidth;
+			for (var iteration = 0; iteration < 2; iteration++)
+			{
+				for (var colspan = 1; colspan <= _columns.Count; colspan++)
+				{
+					for (var i = 0; i < _columns.Count; i++)
+					{
+						ColumnDefinition col = _columns[i];
+						if (!col.Width.IsStar)
+							continue;
+						if (col.ActualWidth >= 0) // if Actual is already set (by a smaller span), skip
+							continue;
+
+						double actualWidth = col.ActualWidth;
+						double minimumWidth = col.MinimumWidth;
+						for (var index = 0; index < InternalChildren.Count; index++)
+						{
+							var child = (View)InternalChildren[index];
+							if (!child.IsVisible || GetColumnSpan(child) != colspan || !IsInColumn(child, i) || NumberOfUnsetColumnWidth(child) > 1)
+								continue;
+							double assignedWidth = GetAssignedColumnWidth(child);
+
+							// If we already have row height info, use it when measuring
+							double assignedHeight = GetAssignedRowHeight(child);
+							var hConstraint = assignedHeight > 0 ? assignedHeight : heightConstraint;
+
+							SizeRequest sizeRequest = child.Measure(widthConstraint, hConstraint, MeasureFlags.IncludeMargins);
+							var columnSpacing = (GetColumnSpan(child) - 1) * ColumnSpacing;
+							actualWidth = Math.Max(actualWidth, sizeRequest.Request.Width - assignedWidth - columnSpacing);
+							minimumWidth = Math.Max(minimumWidth, sizeRequest.Minimum.Width - assignedWidth - columnSpacing);
+						}
+						if (actualWidth >= 0)
+							col.ActualWidth = actualWidth;
+
+						if (minimumWidth >= 0)
+							col.MinimumWidth = minimumWidth;
+					}
+				}
+			}
+
+			starColWidth = 0;
+			for (var index = 0; index < _columns.Count; index++)
+			{
+				ColumnDefinition col = _columns[index];
+				if (!col.Width.IsStar || col.Width.Value == 0 || col.ActualWidth <= 0)
+					continue;
+
+				starColWidth += col.ActualWidth;
+			}
+
+			return Math.Max(starColWidth / totalStarsWidth, 1);
+		}
+
+		double MeasureStarredRows(double widthConstraint, double heightConstraint, double totalStarsHeight)
 		{
 			double starRowHeight;
 			for (var iteration = 0; iteration < 2; iteration++)
@@ -545,11 +696,15 @@ namespace Xamarin.Forms
 							if (!child.IsVisible || GetRowSpan(child) != rowspan || !IsInRow(child, i) || NumberOfUnsetRowHeight(child) > 1)
 								continue;
 							double assignedHeight = GetAssignedRowHeight(child);
-							double assignedWidth = GetAssignedColumnWidth(child);
 
-							SizeRequest sizeRequest = child.Measure(assignedWidth, double.PositiveInfinity, MeasureFlags.IncludeMargins);
-							actualHeight = Math.Max(actualHeight, sizeRequest.Request.Height - assignedHeight - RowSpacing * (GetRowSpan(child) - 1));
-							minimumHeight = Math.Max(minimumHeight, sizeRequest.Minimum.Height - assignedHeight - RowSpacing * (GetRowSpan(child) - 1));
+							// If we already have column width info, use it when measuring
+							double assignedWidth = GetAssignedColumnWidth(child);
+							var wConstraint = assignedWidth > 0 ? assignedWidth : widthConstraint;
+
+							SizeRequest sizeRequest = child.Measure(wConstraint, heightConstraint, MeasureFlags.IncludeMargins);
+							var rowSpacing = (GetRowSpan(child) - 1) * RowSpacing;
+							actualHeight = Math.Max(actualHeight, sizeRequest.Request.Height - assignedHeight - rowSpacing);
+							minimumHeight = Math.Max(minimumHeight, sizeRequest.Minimum.Height - assignedHeight - rowSpacing);
 						}
 						if (actualHeight >= 0)
 							row.ActualHeight = actualHeight;
@@ -560,19 +715,17 @@ namespace Xamarin.Forms
 				}
 			}
 
-			// 3. Star columns:
-
-			//Measure the stars
-			starRowHeight = 1;
+			starRowHeight = 0;
 			for (var index = 0; index < _rows.Count; index++)
 			{
 				RowDefinition row = _rows[index];
-				if (!row.Height.IsStar)
+				if (!row.Height.IsStar || row.Height.Value == 0 || row.ActualHeight <= 0)
 					continue;
-				starRowHeight = row.Height.Value != 0 ? Math.Max(starRowHeight, row.ActualHeight / row.Height.Value) : 0;
+
+				starRowHeight += row.ActualHeight;
 			}
 
-			return starRowHeight;
+			return Math.Max(starRowHeight / totalStarsHeight, 1);
 		}
 
 		void ZeroUnassignedCells()

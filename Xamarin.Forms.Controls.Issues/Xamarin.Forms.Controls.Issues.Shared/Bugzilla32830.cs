@@ -1,6 +1,6 @@
-﻿using Xamarin.Forms.CustomAttributes;
+﻿using System;
+using Xamarin.Forms.CustomAttributes;
 using Xamarin.Forms.Internals;
-using System;
 
 #if UITEST
 using Xamarin.UITest;
@@ -19,7 +19,9 @@ namespace Xamarin.Forms.Controls.Issues
 
 		}
 	}
-
+#if UITEST
+	[Category(Core.UITests.UITestCategories.Bugzilla)]
+#endif
 	[Preserve(AllMembers = true)]
 	[Issue(IssueTracker.Bugzilla, 32830, "Hiding navigation bar causes layouts to shift during navigation", PlatformAffected.iOS)]
 	public class Bugzilla32830 : NoFlashTestNavigationPage
